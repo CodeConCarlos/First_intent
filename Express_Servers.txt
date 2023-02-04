@@ -1,0 +1,225 @@
+var recipes = require('../recipes.json');
+var router = require('express').Router();
+
+
+router.get('/', (req, res)=>{
+  let response
+ 
+let { page=1, limit=3 } = req.query
+if( page <1 || limit < 1)
+ response = []
+else{
+
+   response = recipes.slice((page-1)* limit, page * limit)
+  
+  if(limit !== 3)
+  response = response.slice(0,limit)
+}
+  
+  res.status(200).json(response)
+})
+module.exports = router;
+
+=================== TEST =======================
+const chai = require('chai');
+const chaiHttp = require('chai-http');
+const server = require('../app');
+const recipes = require('../recipes.json');
+const should = chai.should();
+
+chai.use(chaiHttp);
+
+describe('express_recipes_pagination', () => {
+
+    it('Should return 200 for /recipes with default pagination', (done) => {
+        chai.request(server)
+            .get('/recipes')
+            .then(response => {
+                response.status.should.eql(200);
+                response.body.should.eql(recipes.slice(0, 3));
+                done()
+            })
+    });
+
+    it('Should respond with correct data when only page is set in query', (done) => {
+        chai.request(server)
+            .get('/recipes?page=3')
+            .then(response => {
+                response.status.should.eql(200);
+                response.body.should.eql(recipes.slice(6, 9));
+                done()
+            })
+    });
+
+    it('Should respond with correct data when only limit is set in query', (done) => {
+        chai.request(server)
+            .get('/recipes?limit=2')
+            .then(response => {
+                response.status.should.eql(200);
+                response.body.should.eql(recipes.slice(0, 2));
+                done()
+            })
+    });
+
+
+    it('Should respond with correct data when both limit and page are set in query - 1', (done) => {
+        chai.request(server)
+            .get('/recipes?limit=2&page=3')
+            .then(response => {
+                response.status.should.eql(200);
+                response.body.should.eql(recipes.slice(4, 6));
+                done()
+            })
+    })
+
+    it('Should respond with correct data when both limit and page are set in query - 2', (done) => {
+        chai.request(server)
+            .get('/recipes?limit=4&page=3')
+            .then(response => {
+                response.status.should.eql(200);
+                response.body.should.eql(recipes.slice(8));
+                done()
+            })
+    })
+
+    it('Should respond with correct data when both limit and page are out of bounds', (done) => {
+        chai.request(server)
+            .get('/recipes?limit=3&page=4')
+            .then(response => {
+                response.status.should.eql(200);
+                response.body.should.eql([]);
+                done()
+            })
+    })
+});
+
+
+
+
+==================================== DATA 
+
+[
+    {
+        "id" : 1,
+        "name": "Crock Pot Roast"
+    },
+    {
+        "id" : 2,
+        "name": "Roasted Asparagus"
+    },
+    {
+        "id" : 3,
+        "name": "Curried Lentils and Rice"
+    },
+    {
+        "id" : 4,
+        "name": "Big Night Pizza"
+    },
+    {
+        "id" : 5,
+        "name": "Cranberry and Apple Stuffed Acorn Squash Recipe"
+    },
+    {
+        "id" : 6,
+        "name": "Mic's Yorkshire Puds"
+    },
+    {
+        "id" : 7,
+        "name": "Old-Fashioned Oatmeal Cookies"
+    },
+    {
+        "id" : 8,
+        "name": "Blueberry Oatmeal Squares"
+    },
+    {
+        "id" : 9,
+        "name": "Curried chicken salad"
+    }
+]
+
+
+======= URL
+
+/recipes?limit=3&page=3
+
+
+pgae def = 1
+limit def = 3
+
+
+
+
+
+
+========================================= SEGUNDA ==============================
+
+
+
+const Posts = require('../models/posts');
+
+const data = []
+
+const getPostController = (req,res)=>{
+  const { autor, isPublished} = req.query
+  
+  let searchResult = []
+  if( autor || isPublished){
+    if(autor)
+   searchResult=data.filter(item => item.autor=== autor )
+    if(isPublished)
+    searchResult=data.filter(item => item.isPublished === isPublished )
+    if(autor && isPublished)
+    searchResult=data.filter(item => item.autor=== autor && item.isPublished === isPublished )
+  }
+  else
+  searchResult=data
+  res.status(200).send(searchResult)
+
+}
+
+const searchPostController = (req, res)=>{
+  const { id } = req.params
+  const searchResult = data.filter(e => e.id == id)
+  
+  if(searchResult.length>0)
+  res.status(200).json(searchResult[0])
+  else
+  res.status(404).send('ID not found')
+}
+
+const postsController = (req, res)=>{
+  
+  const newPost = new Posts({...req.body, id: data.length+1})
+  data.push(newPost)
+  res.status(201).json(newPost )
+
+}
+
+const noValidOperations = (req, res)=>{
+  res.status(405).send('Not valid')
+}
+
+module.exports = {postsController, getPostController, searchPostController,noValidOperations}
+
+
+
+
+
+
+
+
+
+============================  ROPUTES
+const express = require('express');
+const router = express.Router();
+const {getPostController, searchPostController, postsController, noValidOperations} = require('../controllers/posts');
+
+
+router.get('/:id',searchPostController)
+router.get('/',getPostController)
+router.post('/',postsController)
+router.put('/:id',noValidOperations)
+router.patch('/:id',noValidOperations)
+router.delete('/:id',noValidOperations)
+
+module.exports = router;
